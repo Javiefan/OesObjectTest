@@ -1,10 +1,12 @@
 package com.bwts.oestest.runner;
 
 import com.bwts.oestest.entity.MyObject;
-import com.bwts.oestest.entity.MyObjectAllocator;
+import com.bwts.oestest.utils.Statistics;
+import stormpot.Allocator;
 import stormpot.BlazePool;
 import stormpot.Config;
 import stormpot.Pool;
+import stormpot.Slot;
 import stormpot.Timeout;
 
 import java.util.ArrayList;
@@ -21,12 +23,24 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by Javie on 16/4/11.
  */
 public class StormpotObjectRunner {
-    static MyObjectAllocator allocator = new MyObjectAllocator();
-    static Config<MyObject> config = new Config<>().setAllocator(allocator).setSize(50);
+    static class MyObjectAllocator implements Allocator<MyObject> {
+        @Override
+        public MyObject allocate(Slot slot) throws Exception {
+            return new MyObject(slot);
+        }
+
+        @Override
+        public void deallocate(MyObject poolable) throws Exception {
+
+        }
+    }
+
+    static Config<MyObject> config = new Config<>().setAllocator(new MyObjectAllocator()).setSize(50);
     static Pool<MyObject> pool = new BlazePool<>(config);
-    static Timeout timeout = new Timeout(1, TimeUnit.SECONDS);
+    static Timeout timeout = new Timeout(3, TimeUnit.MINUTES);
 
     private static AtomicLong[] count = new AtomicLong[100];
+    private static List<Long> data = new ArrayList<>();
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
         ExecutorService executorService = Executors.newFixedThreadPool(100);
@@ -41,9 +55,12 @@ public class StormpotObjectRunner {
             count[i] = future.get();
             System.out.println("thread " + i + " : " + count[i]);
             sum.addAndGet(count[i].get());
+            data.add(count[i].get());
             i++;
         }
         System.out.println("total times : " + sum);
+        System.out.println("variance: " + Statistics.getVariance(data));
+        System.out.println("range: " + Statistics.getRange(data));
     }
 
     static class ObjectRunner implements Callable<AtomicLong> {
@@ -58,13 +75,13 @@ public class StormpotObjectRunner {
         public AtomicLong call() {
 
             MyObject myObject = null;
-            while (System.currentTimeMillis() < date + 10 * 1000) {
+            while (System.currentTimeMillis() < date + 60 * 1000) {
                 try {
                     myObject = pool.claim(timeout);
-                    while (myObject == null) {
-                        myObject = pool.claim(timeout);
-                        System.out.println("no usable object!");
-                    }
+//                    while (myObject == null) {
+//                        myObject = pool.claim(timeout);
+//                        System.out.println("no usable object!");
+//                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -76,7 +93,7 @@ public class StormpotObjectRunner {
                 } finally {
                     if (myObject != null) {
                         try {
-//                            Thread.sleep(30);
+                            Thread.sleep(20);
                             myObject.release();
                             Thread.sleep(1);
                         } catch (InterruptedException e) {

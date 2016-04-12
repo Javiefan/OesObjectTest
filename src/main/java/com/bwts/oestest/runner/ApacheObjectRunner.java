@@ -1,6 +1,7 @@
 package com.bwts.oestest.runner;
 
 import com.bwts.oestest.entity.MyObject;
+import com.bwts.oestest.utils.Statistics;
 import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
@@ -40,7 +41,7 @@ public class ApacheObjectRunner {
     }
     private static ObjectPool<MyObject> pool = new GenericObjectPool<>(new MyObjectPoolFactory(), config);
     private static AtomicLong[] count = new AtomicLong[100];
-
+    private static List<Long> data = new ArrayList<>();
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(100);
@@ -55,9 +56,12 @@ public class ApacheObjectRunner {
             count[i] = future.get();
             System.out.println("thread " + i + " : " + count[i]);
             sum.addAndGet(count[i].get());
+            data.add(count[i].get());
             i++;
         }
         System.out.println("total times : " + sum);
+        System.out.println("variance: " + Statistics.getVariance(data));
+        System.out.println("range: " + Statistics.getRange(data));
     }
 
     static class ObjectRunner implements Callable<AtomicLong> {
@@ -71,7 +75,7 @@ public class ApacheObjectRunner {
         @Override
         public AtomicLong call() throws InterruptedException {
             MyObject myObject = null;
-            while (System.currentTimeMillis() < date + 10 * 1000) {
+            while (System.currentTimeMillis() < date + 60 * 1000) {
                 try {
                     myObject = pool.borrowObject();
                     while (myObject == null) {
@@ -82,7 +86,7 @@ public class ApacheObjectRunner {
 //                    System.out.println(number);
 //                    System.out.println(mo.shout() + count.get() + " thread name: " + Thread.currentThread().getName());
                     count.getAndIncrement();
-//                    Thread.sleep(30);
+                    Thread.sleep(20);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {

@@ -43,10 +43,9 @@ public class EstampService {
 
     public EstampService() {
         Oes.OES_Init();
-        Config<Oes> config = new Config<>().setAllocator(new OesAllocator());
-        config.setSize(50);
+        Config<Oes> config = new Config<>().setAllocator(new OesAllocator()).setSize(5);
         remoteOesPool = new BlazePool<>(config);
-        timeout = new Timeout(30, TimeUnit.SECONDS);
+        timeout = new Timeout(3, TimeUnit.MINUTES);
         localOesObj = new Oes();
         this.objectMapper = new ObjectMapper();
     }
@@ -489,7 +488,7 @@ public class EstampService {
         int[] iSealHeight = new int[1];
         iSealHeight[0] = 0;
         Oes oes_api = remoteOesPool.claim(timeout);
-        if (oes_api == null) {
+        if (null == oes_api) {
             System.out.println("no usable oes object! ");
         }
         try {
@@ -512,6 +511,7 @@ public class EstampService {
         } finally {
             if (oes_api != null) {
                 oes_api.release();
+                Thread.sleep(1);
             }
         }
     }
