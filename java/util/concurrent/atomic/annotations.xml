@@ -1,0 +1,5 @@
+<root>
+    <item name='java.util.concurrent.atomic.AtomicLong'>
+        <annotation name='org.jetbrains.annotations.NotNull'/>
+    </item>
+</root>
